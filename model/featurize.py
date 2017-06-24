@@ -9,7 +9,7 @@ class Featurizer(object):
 	"""
 
 	def __init__(self, data_file_name):
-		self.data_file_name = 
+		self.data_file_name = data_file_name
         self.data = None # TODO: load the data into RAM.
 
     def featurize(self):
