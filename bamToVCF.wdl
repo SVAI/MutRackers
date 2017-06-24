@@ -28,6 +28,130 @@
 
 # TASK DEFINITIONS
 
+
+
+# Notes on the contamination estimate:
+# The contamination value is read from the FREEMIX field of the selfSM file output by verifyBamId
+#
+# In Zamboni production, this value is stored directly in METRICS.AGGREGATION_CONTAM
+#
+# Contamination is also stored in GVCF_CALLING and thereby passed to HAPLOTYPE_CALLER
+# But first, it is divided by an underestimation factor thusly:
+#   float(FREEMIX) / ContaminationUnderestimationFactor
+#     where the denominator is hardcoded in Zamboni:
+#     val ContaminationUnderestimationFactor = 0.75f
+#
+# Here, I am handling this by returning both the original selfSM file for reporting, and the adjusted
+# contamination estimate for use in variant calling
+task CheckContamination {
+  File input_bam
+  File input_bam_index
+  File contamination_sites_vcf
+  File contamination_sites_vcf_index
+  String output_prefix
+  Int disk_size
+  Int preemptible_tries
+
+  # Having to do this as a 2-step command in heredoc syntax, adding a python step to read the metrics
+  # This is a hack until read_object() is supported by Cromwell.
+  # It relies on knowing that there is only one data row in the 2-row selfSM TSV file
+  # Piping output of verifyBamId to /dev/null so only stdout is from the python command
+  command <<<
+    set -e
+
+    /usr/gitc/verifyBamID \
+    --verbose \
+    --ignoreRG \
+    --vcf ${contamination_sites_vcf} \
+    --out ${output_prefix} \
+    --bam ${input_bam} \
+    1>/dev/null
+
+    python3 <<CODE
+    import csv
+    import sys
+    with open('${output_prefix}.selfSM') as selfSM:
+      reader = csv.DictReader(selfSM, delimiter='\t')
+      i = 0
+      for row in reader:
+        if float(row["FREELK0"])==0 and float(row["FREELK1"])==0:
+    # A zero value for the likelihoods implies no data. This usually indicates a problem rather than a real event. 
+    # If the bam isn't really empty, this is probably due to the use of a incompatible reference build between 
+    # vcf and bam.
+          sys.stderr.write("Found zero likelihoods. Bam is either very-very shallow, or aligned to the wrong reference (relative to the vcf).")
+          sys.exit(1)
+        print(float(row["FREEMIX"])/0.75)
+        i = i + 1
+    # There should be exactly one row, and if this isn't the case the format of the output is unexpectedly different
+    # and the results are not reliable.
+        if i != 1:
+          sys.stderr.write("Found %d rows in .selfSM file. Was expecting exactly 1. This is an error"%(i))
+          sys.exit(2)
+    CODE
+  >>>
+  runtime {
+    docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
+    memory: "2 GB"
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: preemptible_tries
+  }
+  output {
+    File selfSM = "${output_prefix}.selfSM"
+    File depthSM = "${output_prefix}.depthSM"
+    File log = "${output_prefix}.log"
+
+    # We would like to do the following, however:
+    # The object is read as a string
+    # explicit string->float coercion via float(), as shown below, is supported by Cromwell
+    # the interim value cannot be stored as a string and then assigned to a float. Variables intialized in output cannot be dereferenced in output.
+    # Float contamination = float(read_object(${output_prefix} + ".selfSM").FREEMIX) / 0.75
+
+    # In the interim, get the value from the python hack above:
+    Float contamination = read_float(stdout())
+  }
+}
+
+# Sort BAM file by coordinate order and fix tag values for NM and UQ
+task SortAndFixTags {
+  File input_bam
+  String output_bam_basename
+  File ref_dict
+  File ref_fasta
+  File ref_fasta_index
+  Int disk_size
+  Int preemptible_tries
+
+  command {
+    set -o pipefail
+
+    java -Xmx4000m -jar /usr/gitc/picard.jar \
+    SortSam \
+    INPUT=${input_bam} \
+    OUTPUT=/dev/stdout \
+    SORT_ORDER="coordinate" \
+    CREATE_INDEX=false \
+    CREATE_MD5_FILE=false | \
+    java -Xmx500m -jar /usr/gitc/picard.jar \
+    SetNmAndUqTags \
+    INPUT=/dev/stdin \
+    OUTPUT=${output_bam_basename}.bam \
+    CREATE_INDEX=true \
+    CREATE_MD5_FILE=true \
+    REFERENCE_SEQUENCE=${ref_fasta}
+  }
+  runtime {
+    docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
+    disks: "local-disk " + disk_size + " HDD"
+    cpu: "1"
+    memory: "5000 MB"
+    preemptible: preemptible_tries
+  }
+  output {
+    File output_bam = "${output_bam_basename}.bam"
+    File output_bam_index = "${output_bam_basename}.bai"
+    File output_bam_md5 = "${output_bam_basename}.bam.md5"
+  }
+}
   
 # Call variants on a single sample with HaplotypeCaller to produce a GVCF
 task HaplotypeCaller {
@@ -165,6 +289,37 @@ task CollectGvcfCallingMetrics {
 }
 
 workflow bamToVCF{
+  # Variable declaration
+  Array[File] scattered_calling_intervals
+  File inputNF2Bam
+  File input_bam_index
+
+  # Sort aggregated+deduped BAM file and fix tags
+  call SortAndFixTags as SortAndFixSampleBam {
+    input:
+      # TODO - Read in input_bam file
+      # input_bam = MarkDuplicates.output_bam,
+      input_bam = inputNF2Bam,
+      output_bam_basename = base_file_name + ".aligned.duplicate_marked.sorted",
+      ref_dict = ref_dict,
+      ref_fasta = ref_fasta,
+      ref_fasta_index = ref_fasta_index,
+      disk_size = agg_large_disk,
+      preemptible_tries = 0
+  }
+
+  # Estimate level of cross-sample contamination
+  call CheckContamination {
+    input:
+      input_bam = SortAndFixSampleBam.output_bam,
+      input_bam_index = SortAndFixSampleBam.output_bam_index,
+      contamination_sites_vcf = contamination_sites_vcf,
+      contamination_sites_vcf_index = contamination_sites_vcf_index,
+      output_prefix = base_file_name + ".preBqsr",
+      disk_size = agg_small_disk,
+      preemptible_tries = agg_preemptible_tries
+  }
+
   # Call variants in parallel over WGS calling intervals
   scatter (subInterval in scattered_calling_intervals) {
   
@@ -172,8 +327,11 @@ workflow bamToVCF{
     call HaplotypeCaller {
       input:
         contamination = CheckContamination.contamination,
-        input_bam = GatherBamFiles.output_bam,
-        input_bam_index = GatherBamFiles.output_bam_index,
+        # TODO - Replace input bam files
+        #input_bam = GatherBamFiles.output_bam,
+        #input_bam_index = GatherBamFiles.output_bam_index,
+        input_bam = inputNF2Bam,
+        input_bam_index = inputNF2Bam_index,
         interval_list = subInterval,
         gvcf_basename = base_file_name,
         ref_dict = ref_dict,
