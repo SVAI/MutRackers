@@ -1,4 +1,3 @@
-import pickle
 import numpy as np
 
 import keras
@@ -6,6 +5,8 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 
 from sklearn.model_selection import KFold
+
+from model.featurize import Featurizer
 
 class MutationLearner(object):
     """
@@ -20,46 +21,18 @@ class MutationLearner(object):
 
     def __init__(self, data_file):
         self.data_file = data_file
-        self.data = None # TODO: load the data into RAM.
         self.input_dim = 0 # TODO: Determine the input dimension from the data.
 
-    def preprocessing(self):
+    def initialize_model(self):
         """
-        Takes the data loaded into RAM, and turns it into a data matrix
-        that can be passed into a library for neural network training.
+        Model architecture:
+        Single hidden layer feed-forward neural network classification algorithm.
 
-        E.g.
-        Data in VCF format (TODO: fill in what this looks like)
+        Input ---> Hidden Layer 1 ---> Output Layer
 
-        ...
-
-                feature_1 feature_2 feature_3 ... feature_d
-               ______________________________________________
-        mut_1 [
-        mut_2 [
-        mut_3 [
-        ...   [
-        mut_n  [
-
+        Since the number of features is small, the fruitfulness of additional layers,
+        or of specialized layers like convolutional or pooling layers is questionable.
         """
-        return train_data, train_labels
-
-    def postprocessing(self, learner):
-        """
-        Takes weights from the neural network ("learner"), and pickles them into
-        the file trained_weights.pkl. Learner is a Keras object.
-        """
-        output = open('./trained_weights.pkl', 'wb')
-        pickle.dump(learner, output)
-
-    def train(self):
-        """
-        Initialize the Keras model. Using a sequential model for now.
-        """
-        # Obtain the training data, and it's labels.
-        data, labels = self.preprocessing()
-        kf = KFold(n_splits=3)
-
         # Define the model.
         model = Sequential()
 
@@ -70,6 +43,18 @@ class MutationLearner(object):
         # Hidden Layer 1 (?)
         model.add(Dense(units=self.input_dim / 2))
         model.add(Activation('softmax'))
+
+        return model
+
+    def train(self):
+        """
+        Initialize the Keras model. Using a sequential model for now.
+        """
+        # Obtain the training data, and it's labels.
+        data, labels = Featurizer(self.data_file).featurize()
+        kf = KFold(n_splits=3)
+
+        model = self.initialize_model()
 
         # Compile and train the model. This is going to be time-intensive, starting here.
         for train_index, validation_index in kf.split(data):
@@ -101,8 +86,5 @@ class MutationLearner(object):
                 validation_data, validation_labels, batch_size=validation_batch_size)
 
             print("Loss and metrics! %s" % str(loss_and_metrics)) # TODO: Fix this once you know whats in it.
-
-        # # Persist the model to disk (hardware), for use in test.py.
-        # self.postprocessing(model)
 
         return model

@@ -1,4 +1,5 @@
 from model.learner import MutationLearner
+import pickle
 
 TRAIN_DATA_FILE_NAME = "" # TODO: Fill in location of VCF in repository.
 TEST_DATA_FILE_NAME = "" # TODO: Fill in location of Onno VCF.
@@ -14,8 +15,8 @@ test_learner = MutationLearner(TEST_DATA_FILE_NAME)
 test_data_matrix = test_learner.preprocessing()
 
 test_batch_size = test_data_matrix.shape[0]
-predictions = model.predict(test_data_matrix, batch_size=test_batch_size)
 
-# Attach here some exploratory data analysis on our findings. 
-# This could be interesting for a final presentation. Visualizations,
-# abnormal findings, etc...
+# This should return the probabilities.
+predictions = learned_model.predict(test_data_matrix, batch_size=test_batch_size)
+predictions_file = open('model_probabilities.pkl', 'wb')
+pickle.dump(predictions, predictions_file)
