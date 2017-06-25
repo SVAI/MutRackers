@@ -65,6 +65,7 @@
   "##_COMMENT3": "REFERENCE FILES",
   "bamToVCF.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
   "bamToVCF.ref_fasta": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "bamToVCF.ref_fasta19": "Homo_sapiens_assembly19.fasta",
   "bamToVCF.ref_fasta_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
 
   "##_COMMENT4": "KNOWN SITES RESOURCES", 
