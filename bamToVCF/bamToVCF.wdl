@@ -27,18 +27,16 @@
 ## licensing information pertaining to the included programs.
 
 # TASK DEFINITIONS
-
   
 # Call variants on a single sample with HaplotypeCaller to produce a GVCF
 task HaplotypeCaller {
   File input_bam
   File input_bam_index
   File interval_list
-  String gvcf_basename
+  String vcf_basename
   File ref_dict
   File ref_fasta
   File ref_fasta_index
-  Float? contamination
   Int disk_size
   Int preemptible_tries
 
@@ -47,14 +45,13 @@ task HaplotypeCaller {
       -jar /usr/gitc/GATK35.jar \
       -T HaplotypeCaller \
       -R ${ref_fasta} \
-      -o ${gvcf_basename}.vcf.gz \
+      -o ${vcf_basename}.vcf.gz \
       -I ${input_bam} \
       -L ${interval_list} \
       -ERC GVCF \
       --max_alternate_alleles 3 \
       -variant_index_parameter 128000 \
       -variant_index_type LINEAR \
-      -contamination ${default=0 contamination} \
       --read_filter OverclippedRead
   }
   runtime {
@@ -65,8 +62,8 @@ task HaplotypeCaller {
     preemptible: preemptible_tries
   }
   output {
-    File output_gvcf = "${gvcf_basename}.vcf.gz"
-    File output_gvcf_index = "${gvcf_basename}.vcf.gz.tbi"
+    File output_vcf = "${vcf_basename}.vcf.gz"
+    File output_vcf_index = "${vcf_basename}.vcf.gz.tbi"
   }
 }
 
@@ -98,8 +95,8 @@ task MergeVCFs {
   }
 }
 
-# Validate a GVCF with -gvcf specific validation
-task ValidateGVCF {
+# Validate a VCF 
+task ValidateVCF {
   File input_vcf
   File input_vcf_index
   File ref_fasta
@@ -117,7 +114,6 @@ task ValidateGVCF {
     -V ${input_vcf} \
     -R ${ref_fasta} \
     -L ${wgs_calling_interval_list} \
-    -gvcf \
     --validationTypeToExclude ALLELES \
     --reference_window_stop 208 -U  \
     --dbsnp ${dbSNP_vcf}
@@ -130,52 +126,41 @@ task ValidateGVCF {
   }
 }
 
-# Collect variant calling metrics from GVCF output
-task CollectGvcfCallingMetrics {
-  File input_vcf
-  File input_vcf_index
-  String metrics_basename
+workflow bamToVCF{
+  # Variable declaration
+  Array[File] scattered_calling_intervals
+  File wgs_calling_interval_list
+  File inputBam
+  File input_bam_index
+  String vcf_basename
+
+  File ref_fasta
+  File ref_fasta_index
+  File ref_dict
   File dbSNP_vcf
   File dbSNP_vcf_index
-  File ref_dict
-  Int disk_size
-  File wgs_evaluation_interval_list
+
+  Int flowcell_small_disk
+  Int flowcell_medium_disk
+  Int agg_small_disk
+  Int agg_medium_disk
+  Int agg_large_disk
   Int preemptible_tries
+  Int agg_preemptible_tries
 
-  command {
-    java -Xmx2000m -jar /usr/gitc/picard.jar \
-      CollectVariantCallingMetrics \
-      INPUT=${input_vcf} \
-      OUTPUT=${metrics_basename} \
-      DBSNP=${dbSNP_vcf} \
-      SEQUENCE_DICTIONARY=${ref_dict} \
-      TARGET_INTERVALS=${wgs_evaluation_interval_list} \
-      GVCF_INPUT=true
-  }
-  runtime {
-    docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
-    memory: "3 GB"
-    disks: "local-disk " + disk_size + " HDD"
-    preemptible: preemptible_tries
-  }
-  output {
-    File summary_metrics = "${metrics_basename}.variant_calling_summary_metrics"
-    File detail_metrics = "${metrics_basename}.variant_calling_detail_metrics"
-  }
-}
-
-workflow bamToVCF{
   # Call variants in parallel over WGS calling intervals
   scatter (subInterval in scattered_calling_intervals) {
   
-    # Generate GVCF by interval
+    # Generate VCF by interval
     call HaplotypeCaller {
       input:
-        contamination = CheckContamination.contamination,
-        input_bam = GatherBamFiles.output_bam,
-        input_bam_index = GatherBamFiles.output_bam_index,
+        # TODO - Replace input bam files
+        #input_bam = GatherBamFiles.output_bam,
+        #input_bam_index = GatherBamFiles.output_bam_index,
+        input_bam = inputBam,
+        input_bam_index = input_bam_index,
         interval_list = subInterval,
-        gvcf_basename = base_file_name,
+        vcf_basename = base_file_name,
         ref_dict = ref_dict,
         ref_fasta = ref_fasta,
         ref_fasta_index = ref_fasta_index,
@@ -184,18 +169,18 @@ workflow bamToVCF{
      }
   }
   
-  # Combine by-interval GVCFs into a single sample GVCF file
+  # Combine by-interval VCFs into a single sample VCF file
   call MergeVCFs {
     input:
-      input_vcfs = HaplotypeCaller.output_gvcf,
-      input_vcfs_indexes = HaplotypeCaller.output_gvcf_index,
-      output_vcf_name = final_gvcf_name,
+      input_vcfs = HaplotypeCaller.output_vcf,
+      input_vcfs_indexes = HaplotypeCaller.output_vcf_index,
+      output_vcf_name = final_vcf_name,
       disk_size = agg_small_disk,
       preemptible_tries = agg_preemptible_tries
   }
   
   # Validate the GVCF output of HaplotypeCaller
-  call ValidateGVCF {
+  call ValidateVCF {
     input:
       input_vcf = MergeVCFs.output_vcf,
       input_vcf_index = MergeVCFs.output_vcf_index,
@@ -209,39 +194,8 @@ workflow bamToVCF{
       preemptible_tries = agg_preemptible_tries
   }
   
-  # QC the GVCF
-  call CollectGvcfCallingMetrics {
-    input:
-      input_vcf = MergeVCFs.output_vcf,
-      input_vcf_index = MergeVCFs.output_vcf_index,
-      metrics_basename = base_file_name,
-      dbSNP_vcf = dbSNP_vcf,
-      dbSNP_vcf_index = dbSNP_vcf_index,
-      ref_dict = ref_dict,
-      wgs_evaluation_interval_list = wgs_evaluation_interval_list,
-      disk_size = agg_small_disk,
-      preemptible_tries = agg_preemptible_tries
-  }
-
   # Outputs that will be retained when execution is complete  
   output {
-    #CollectQualityYieldMetrics.*
-    #ValidateReadGroupSamFile.*
-    #CollectReadgroupBamQualityMetrics.*
-    #CollectUnsortedReadgroupBamQualityMetrics.*
-    #CrossCheckFingerprints.*
-    #ValidateBamFromCram.*
-    #CalculateReadGroupChecksum.*
-    #ValidateAggregatedSamFile.*
-    #CollectAggregationMetrics.*
-    #CheckFingerprint.*
-    #CollectWgsMetrics.*
-    #CollectRawWgsMetrics.*
-    #CheckContamination.*
-    CollectGvcfCallingMetrics.*
-    #MarkDuplicates.duplicate_metrics
-    #GatherBqsrReports.*
-    #ConvertToCram.*
     MergeVCFs.*
     } 
 }
