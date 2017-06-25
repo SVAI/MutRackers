@@ -53,6 +53,6 @@
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0050_of_50/scattered.interval_list"
   ],
   "bamToVCF.inputNF2Bam": "HG00110.chrom11.ILLUMINA.bwa.GBR.low_coverage.20130415.bam",
-  "bamToVCF.input_bam_index": 
+  "bamToVCF.input_bam_index": "OF_112015SJIA_2.bam.bai"
 
 }
