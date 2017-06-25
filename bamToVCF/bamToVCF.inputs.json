@@ -57,7 +57,7 @@
   "##_COMMENT2": "INPUT DATA",
   "bamToVCF.inputBam": "gs://nf2-data/example/HG002_test.bam",
   "bamToVCF.input_bam_index": "gs://nf2-data/example/HG002_test.bam.bai",
-  "bamToVCF.final_vcf_name": "HG002_test.vcf",
+  "bamToVCF.final_vcf_name": "HG002_test.vcf.gz",
   "bamToVCF.base_file_name": "HG002_test",
   "bamToVCF.vcf_basename": "HG002_vcfbasename",
   "bamToVCF.rg_bam": "HG002_rg",

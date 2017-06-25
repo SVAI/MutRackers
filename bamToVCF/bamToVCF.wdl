@@ -130,7 +130,7 @@ task MergeVCFs {
   }
   output {
     File output_vcf = "${output_vcf_name}"
-    #File output_vcf_index = "${output_vcf_name}.tbi"
+    File output_vcf_index = "${output_vcf_name}.tbi"
   }
   runtime {
     docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
