@@ -1,5 +1,5 @@
 {
-  "##_COMMENT2": "INTERVALS",  
+  "##_COMMENT1": "INTERVALS",  
   "bamToVCF.scattered_calling_intervals": [
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0001_of_50/scattered.interval_list", 
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0002_of_50/scattered.interval_list", 
@@ -52,7 +52,30 @@
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0049_of_50/scattered.interval_list", 
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0050_of_50/scattered.interval_list"
   ],
-  "bamToVCF.inputNF2Bam": "HG00110.chrom11.ILLUMINA.bwa.GBR.low_coverage.20130415.bam",
-  "bamToVCF.input_bam_index": 
+  "bamToVCF.wgs_calling_interval_list": "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
 
+  "##_COMMENT2": "INPUT DATA",
+  "bamToVCF.inputBam": "gs://nf2-data/example/HG002_test.bam",
+  "bamToVCF.input_bam_index": "gs://nf2-data/example/HG002_test.bam.bai",
+  "bamToVCF.final_vcf_name": "HG002_test.vcf",
+  "bamToVCF.base_file_name": "HG002_test",
+  "bamToVCF.vcf_basename": "HG002_vcfbasename",
+
+  "##_COMMENT3": "REFERENCE FILES",
+  "bamToVCF.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
+  "bamToVCF.ref_fasta": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "bamToVCF.ref_fasta_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
+
+  "##_COMMENT4": "KNOWN SITES RESOURCES", 
+  "bamToVCF.dbSNP_vcf": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+  "bamToVCF.dbSNP_vcf_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+
+  "##_COMMENT5": "DISK SIZES + PREEMPTIBLES",
+  "bamToVCF.agg_small_disk": 200,
+  "bamToVCF.agg_medium_disk": 300,
+  "bamToVCF.agg_large_disk": 400,
+  "bamToVCF.agg_preemptible_tries": 3,
+  "bamToVCF.flowcell_small_disk": 100,
+  "bamToVCF.flowcell_medium_disk": 200,
+  "bamToVCF.preemptible_tries": 1
 }
