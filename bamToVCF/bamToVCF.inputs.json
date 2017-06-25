@@ -52,7 +52,7 @@
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0049_of_50/scattered.interval_list", 
     "gs://genomics-public-data/resources/broad/hg38/v0/scattered_calling_intervals/temp_0050_of_50/scattered.interval_list"
   ],
-  "batToVCF.wgs_calling_interval_list": "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
+  "bamToVCF.wgs_calling_interval_list": "gs://genomics-public-data/resources/broad/hg38/v0/wgs_calling_regions.hg38.interval_list",
 
   "##_COMMENT2": "INPUT DATA",
   "bamToVCF.inputBam": "gs://nf2-data/example/HG002_test.bam",
@@ -61,20 +61,20 @@
   "bamToVCF.base_file_name": "HG002_test",
 
   "##_COMMENT3": "REFERENCE FILES",
-  "PairedEndSingleSampleWorkflow.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
-  "PairedEndSingleSampleWorkflow.ref_fasta": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
-  "PairedEndSingleSampleWorkflow.ref_fasta_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
+  "bamToVCF.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
+  "bamToVCF.ref_fasta": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta",
+  "bamToVCF.ref_fasta_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.fasta.fai",
 
   "##_COMMENT4": "KNOWN SITES RESOURCES", 
-  "PairedEndSingleSampleWorkflow.dbSNP_vcf": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
-  "PairedEndSingleSampleWorkflow.dbSNP_vcf_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
+  "bamToVCF.dbSNP_vcf": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf",
+  "bamToVCF.dbSNP_vcf_index": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dbsnp138.vcf.idx",
 
   "##_COMMENT5": "DISK SIZES + PREEMPTIBLES",
-  "PairedEndSingleSampleWorkflow.agg_small_disk": 200,
-  "PairedEndSingleSampleWorkflow.agg_medium_disk": 300,
-  "PairedEndSingleSampleWorkflow.agg_large_disk": 400,
-  "PairedEndSingleSampleWorkflow.agg_preemptible_tries": 3,
-  "PairedEndSingleSampleWorkflow.flowcell_small_disk": 100,
-  "PairedEndSingleSampleWorkflow.flowcell_medium_disk": 200,
-  "PairedEndSingleSampleWorkflow.preemptible_tries": 1
+  "bamToVCF.agg_small_disk": 200,
+  "bamToVCF.agg_medium_disk": 300,
+  "bamToVCF.agg_large_disk": 400,
+  "bamToVCF.agg_preemptible_tries": 3,
+  "bamToVCF.flowcell_small_disk": 100,
+  "bamToVCF.flowcell_medium_disk": 200,
+  "bamToVCF.preemptible_tries": 1
 }
