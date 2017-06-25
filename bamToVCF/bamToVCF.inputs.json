@@ -59,6 +59,7 @@
   "bamToVCF.input_bam_index": "gs://nf2-data/example/HG002_test.bam.bai",
   "bamToVCF.final_vcf_name": "HG002_test.vcf",
   "bamToVCF.base_file_name": "HG002_test",
+  "bamToVCF.vcf_basename": "HG002_vcfbasename",
 
   "##_COMMENT3": "REFERENCE FILES",
   "bamToVCF.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",

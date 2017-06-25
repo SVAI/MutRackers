@@ -132,6 +132,7 @@ workflow bamToVCF{
   File wgs_calling_interval_list
   File inputBam
   File input_bam_index
+  String vcf_basename
 
   File ref_fasta
   File ref_fasta_index
