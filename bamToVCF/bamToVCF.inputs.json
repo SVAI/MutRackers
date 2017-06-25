@@ -60,6 +60,7 @@
   "bamToVCF.final_vcf_name": "HG002_test.vcf",
   "bamToVCF.base_file_name": "HG002_test",
   "bamToVCF.vcf_basename": "HG002_vcfbasename",
+  "bamToVCF.rg_bam": "HG002_rg",
 
   "##_COMMENT3": "REFERENCE FILES",
   "bamToVCF.ref_dict": "gs://genomics-public-data/resources/broad/hg38/v0/Homo_sapiens_assembly38.dict",
@@ -74,7 +75,7 @@
   "bamToVCF.agg_small_disk": 200,
   "bamToVCF.agg_medium_disk": 300,
   "bamToVCF.agg_large_disk": 400,
-  "bamToVCF.agg_preemptible_tries": 3,
+  "bamToVCF.agg_preemptible_tries": 1,
   "bamToVCF.flowcell_small_disk": 100,
   "bamToVCF.flowcell_medium_disk": 200,
   "bamToVCF.preemptible_tries": 1

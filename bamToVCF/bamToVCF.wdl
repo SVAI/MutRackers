@@ -27,6 +27,51 @@
 ## licensing information pertaining to the included programs.
 
 # TASK DEFINITIONS
+
+# Add read groups to the truth BAM files 
+#  (NIST novoalign BAMs do not have RGs)
+task AddReadGroups {
+  File input_bam
+  File input_bam_index
+  Int disk_size
+  Int preemptible_tries
+  String bam_out
+
+  command {
+    java -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xmx8000m \
+      -jar /usr/gitc/picard.jar \
+      AddOrReplaceReadGroups \
+      I=${input_bam} \
+      O=${bam_out}.bam \
+      CREATE_INDEX=true \
+      RGID=foo \
+      RGLB=foolib \
+      RGSM=HG002 \
+      RGPL=Illumina \
+      RGPU=unit1; \
+    java -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xmx8000m \
+      -jar /usr/gitc/picard.jar \
+      SortSam \
+      I=${bam_out}.bam \
+      O=${bam_out}_sorted.bam \
+      SORT_ORDER=coordinate; \
+    java -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xmx8000m \
+      -jar /usr/gitc/picard.jar \
+      BuildBamIndex \
+      I=${bam_out}_sorted.bam
+  }
+  runtime {
+    docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
+    memory: "10 GB"
+    cpu: "2"
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: preemptible_tries
+  }
+  output {
+    File output_bam = "${bam_out}_sorted.bam"
+    File output_bam_index = "${bam_out}_sorted.bai"
+  }
+}
   
 # Call variants on a single sample with HaplotypeCaller to produce a GVCF
 task HaplotypeCaller {
@@ -85,7 +130,7 @@ task MergeVCFs {
   }
   output {
     File output_vcf = "${output_vcf_name}"
-    File output_vcf_index = "${output_vcf_name}.tbi"
+    #File output_vcf_index = "${output_vcf_name}.tbi"
   }
   runtime {
     docker: "broadinstitute/genomes-in-the-cloud:2.2.5-1486412288"
@@ -133,6 +178,8 @@ workflow bamToVCF{
   File inputBam
   File input_bam_index
   String vcf_basename
+  String final_vcf_name
+  String rg_bam
 
   File ref_fasta
   File ref_fasta_index
@@ -148,6 +195,16 @@ workflow bamToVCF{
   Int preemptible_tries
   Int agg_preemptible_tries
 
+  # Add read groups to the BAM
+  call AddReadGroups {
+    input:
+      input_bam = inputBam,
+      input_bam_index = input_bam_index,
+      disk_size = agg_large_disk,
+      preemptible_tries = agg_preemptible_tries,
+      bam_out = rg_bam
+  }
+
   # Call variants in parallel over WGS calling intervals
   scatter (subInterval in scattered_calling_intervals) {
   
@@ -157,10 +214,10 @@ workflow bamToVCF{
         # TODO - Replace input bam files
         #input_bam = GatherBamFiles.output_bam,
         #input_bam_index = GatherBamFiles.output_bam_index,
-        input_bam = inputBam,
-        input_bam_index = input_bam_index,
+        input_bam = AddReadGroups.output_bam,
+        input_bam_index = AddReadGroups.output_bam_index,
         interval_list = subInterval,
-        vcf_basename = base_file_name,
+        vcf_basename = vcf_basename,
         ref_dict = ref_dict,
         ref_fasta = ref_fasta,
         ref_fasta_index = ref_fasta_index,
