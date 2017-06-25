@@ -2,11 +2,11 @@ import numpy as np
 
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Dropout
 
 from sklearn.model_selection import KFold
 
-from model.featurize import Featurizer
+from featurize import Featurizer
 
 class MutationLearner(object):
     """
@@ -21,9 +21,8 @@ class MutationLearner(object):
 
     def __init__(self, data_file):
         self.data_file = data_file
-        self.input_dim = 0 # TODO: Determine the input dimension from the data.
 
-    def initialize_model(self):
+    def initialize_model(self, train_dim):
         """
         Model architecture:
         Single hidden layer feed-forward neural network classification algorithm.
@@ -36,13 +35,16 @@ class MutationLearner(object):
         # Define the model.
         model = Sequential()
 
-        # Input Layer (?)
-        model.add(Dense(units=self.input_dim, input_dim=self.input_dim))
-        model.add(Activation('relu'))
+        # Input Layer
+        model.add(Dense(train_dim, input_dim=train_dim, activation='relu'))
+        model.add(Dropout(0.5))
 
-        # Hidden Layer 1 (?)
-        model.add(Dense(units=self.input_dim / 2))
-        model.add(Activation('softmax'))
+        # Hidden Layer 1
+        model.add(Dense(int(train_dim / 2), activation='relu'))
+        model.add(Dropout(0.5))
+
+        # Hidden Layer 2
+        model.add(Dense(1, activation='softmax'))
 
         return model
 
@@ -52,12 +54,15 @@ class MutationLearner(object):
         """
         # Obtain the training data, and it's labels.
         data, labels = Featurizer(self.data_file).featurize()
-        kf = KFold(n_splits=3)
 
-        model = self.initialize_model()
+        self.input_dim = data.shape[1]
+
+        kf = KFold(n_splits=3)
 
         # Compile and train the model. This is going to be time-intensive, starting here.
         for train_index, validation_index in kf.split(data):
+            model = self.initialize_model(self.input_dim)
+
             train_data, train_labels = data[train_index], labels[train_index]
             validation_data, validation_labels = data[validation_index], labels[validation_index]
 
@@ -65,7 +70,7 @@ class MutationLearner(object):
             keras_docs_momentum = 0.9 # Tinker with this if needed.
             for epsilon in epsilon_tests:
                 model.compile(
-                    loss='categorical_crossentropy',
+                    loss='mean_squared_error',
                     optimizer=keras.optimizers.SGD(
                         lr=epsilon,
                         momentum=keras_docs_momentum,
@@ -75,9 +80,16 @@ class MutationLearner(object):
                 )
 
             # Fit the model to the data.
-            keras_docs_epochs = 5
+            keras_docs_epochs = 100
             train_batch_size = train_data.shape[0]
-            model.fit(train_data, train_labels, epochs=keras_docs_epochs, batch_size=train_batch_size)
+
+            model.fit(
+                train_data,
+                train_labels,
+                epochs=keras_docs_epochs,
+                batch_size=train_batch_size,
+                validation_data=(validation_data, validation_labels)
+            )
 
             # Performance of the model (moment of truth!)
             validation_batch_size = validation_data.shape[0]
@@ -87,4 +99,7 @@ class MutationLearner(object):
 
             print("Loss and metrics! %s" % str(loss_and_metrics)) # TODO: Fix this once you know whats in it.
 
+        # Hack from SO:
+        # https://stackoverflow.com/questions/40560795/tensorflow-attributeerror-nonetype-object-has-no-attribute-tf-deletestatus
+        import gc; gc.collect()
         return model

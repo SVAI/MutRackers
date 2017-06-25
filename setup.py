@@ -4,7 +4,10 @@ except ImportError:
     from distutils.core import setup
 
 install_requires = [
-    'PyVCF==0.6.8'
+    'PyVCF>=0.6.8',
+    'keras>=2.0.5',
+    'tensorflow>=0.12.0',
+    'scikit-learn>=0.18.1'
 ]
 
 with open('README.md') as f:

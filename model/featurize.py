@@ -1,5 +1,6 @@
 import vcf
 import numpy as np
+import random
 from sklearn import preprocessing
 
 FORMAT_FEATURE_NAMES = ['AD1', 'AD2', 'GQ', 'DP', 'GT']
@@ -7,10 +8,10 @@ FORMAT_FEATURE_NAMES = ['AD1', 'AD2', 'GQ', 'DP', 'GT']
 INFO_FEATURE_NAMES = [
     'ExcessHet', 'AC', 'BaseQRankSum', 'FS', 'AF',
     'MLEAC', 'AN', 'SOR', 'MQ', 'QD', 'DP', 'ClippingRankSum',
-    'MQRankSum', 'ReadPosRankSum'
+    'MQRankSum', 'ReadPosRankSum', 'label'
 ]
 
-OTHER_FEATURE_NAMES = ['QUAL']
+OTHER_FEATURE_NAMES = ['QUAL', 'is_snp']
 
 class Featurizer(object):
     """
@@ -22,8 +23,9 @@ class Featurizer(object):
             humans, and has potential to cause disease or other harm).
     """
 
-    def __init__(self, data_file_name):
+    def __init__(self, data_file_name, test=False):
         self.data_file_name = data_file_name
+        self.test = test
 
     def featurize(self):
         with open(self.data_file_name, 'rb') as f:
@@ -39,6 +41,9 @@ class Featurizer(object):
             num_records,
             len(FORMAT_FEATURE_NAMES) + len(INFO_FEATURE_NAMES) + len(OTHER_FEATURE_NAMES)
         ])
+
+        if not self.test:
+            labels = []
 
         with open(self.data_file_name, 'rb') as f:
             vcf_reader = vcf.Reader(f)
@@ -56,6 +61,11 @@ class Featurizer(object):
                         data_matrix[i][j] = info_feature_value
                         j += 1
                     except KeyError:
+                        if info_feature == "label" and not self.test:
+                            # TODO: Replace with true VCF logic
+                            fake_feature = random.randint(0, 1)
+                            labels.append(fake_feature)
+
                         data_matrix[i][j] = None
                         j += 1
 
@@ -89,8 +99,13 @@ class Featurizer(object):
                     data_matrix[i][j] = format_feature_value
                     j += 1
 
-                other_feature_value = record.QUAL
-                data_matrix[i][j] = other_feature_value
+                qual_feature_value = record.QUAL
+                data_matrix[i][j] = qual_feature_value
+
+                j += 1
+
+                is_snp_feature_value = record.is_snp
+                data_matrix[i][j] = is_snp_feature_value
 
                 i += 1
 
@@ -98,4 +113,7 @@ class Featurizer(object):
         imputer.fit(data_matrix)
         data_matrix = imputer.transform(data_matrix)
 
-        return data_matrix
+        if not self.test:
+            return data_matrix, np.array(labels)
+        else:
+            return data_matrix

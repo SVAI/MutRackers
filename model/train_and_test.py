@@ -1,22 +1,19 @@
-from model.learner import MutationLearner
+from learner import MutationLearner
+from featurize import Featurizer
+
 import pickle
 
-TRAIN_DATA_FILE_NAME = "" # TODO: Fill in location of VCF in repository.
-TEST_DATA_FILE_NAME = "" # TODO: Fill in location of Onno VCF.
+TRAIN_DATA_FILE_NAME = "../example_data/HG002_250bp.vcf.gz" # TODO: Fill in with real VCFs (this is example data)
+TEST_DATA_FILE_NAME = "../example_data/HG002_250bp.vcf.gz" # TODO: Fill in location of Onno VCF.
 
 # Trains the learner.
 train_learner = MutationLearner(TRAIN_DATA_FILE_NAME)
 learned_model = train_learner.train()
 
-# A bit of a misnomer. We don't actually call the "train"
-# function here, but I need the preprocessing capabilities of the class.
-# TODO: Separate preprocessing method into utils file?
-test_learner = MutationLearner(TEST_DATA_FILE_NAME)
-test_data_matrix = test_learner.preprocessing()
-
+test_data_matrix = Featurizer(TEST_DATA_FILE_NAME, test=True).featurize()
 test_batch_size = test_data_matrix.shape[0]
 
 # This should return the probabilities.
 predictions = learned_model.predict(test_data_matrix, batch_size=test_batch_size)
-predictions_file = open('model_probabilities.pkl', 'wb')
+predictions_file = open('saved_files/model_probabilities.pkl', 'wb')
 pickle.dump(predictions, predictions_file)
